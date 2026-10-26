@@ -1,14 +1,18 @@
 services:
   - type: web
-    name: ai-mystery-room
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    name: ai-mystery-room-api
+    runtime: node
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run start --workspace server
     healthCheckPath: /api/health
     envVars:
       - key: MONGODB_URI
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: SERVE_CLIENT
+        value: "false"
       - key: GEMINI_MODEL
         value: gemini-3.8-flash

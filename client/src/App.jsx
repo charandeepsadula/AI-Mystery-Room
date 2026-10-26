@@ -23,7 +23,8 @@ function App() {
   const [result, setResult] = useState(null)
 
   async function api(path, body) {
-    const response = await fetch(`/api${path}`, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, ...(body ? { body: JSON.stringify(body) } : {}) })
+    const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+    const response = await fetch(`${apiBaseUrl}/api${path}`, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, ...(body ? { body: JSON.stringify(body) } : {}) })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error || 'Something went wrong.')
     return data

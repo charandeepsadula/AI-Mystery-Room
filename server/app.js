@@ -8,8 +8,8 @@ import { generateMystery } from './services/gemini.js'
 
 export function createApp({ CaseModel = Case, mysteryGenerator = generateMystery, databaseStatus = () => 'connected', serveClient = true } = {}) {
   const app = express()
-  const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173'
-  app.use(cors({ origin: clientOrigin }))
+  const clientOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map((origin) => origin.trim()).filter(Boolean)
+  app.use(cors({ origin: clientOrigins.length === 1 ? clientOrigins[0] : clientOrigins }))
   app.use(express.json({ limit: '16kb' }))
 
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', database: databaseStatus() }))

@@ -20,7 +20,7 @@ No official AI Mystery Room documentation or `SPEC.md` was present in the worksp
 
 Run the API gameplay tests with `npm test` and the frontend lint with `npm run lint --workspace client`.
 
-The server starts only after it connects to MongoDB. Case generation returns a setup error until `GEMINI_API_KEY` is configured.
+The server starts only after it connects to MongoDB. Case generation returns a setup error until `GEMINI_API_KEY` is configured. The API production command is `npm run start --workspace server`; it requires `MONGODB_URI` and optionally reads `PORT`, `GEMINI_MODEL`, `CLIENT_ORIGIN`, and `SERVE_CLIENT`.
 
 ## Gameplay rules
 
@@ -42,8 +42,14 @@ Each discovered clue adds 5 points; each hint subtracts 10. Scores cannot go bel
 - `GET /api/cases/:caseId/result` — reveal outcome and solution after accusation
 - `GET /api/health` — service and database status
 
-## Production preparation
+## Separate-host deployment preparation
 
-The root Dockerfile builds the client and runs the Express server, which serves both the API and built frontend. `render.yaml` configures a Render Blueprint for the container and asks for `MONGODB_URI` and `GEMINI_API_KEY` as private dashboard values. The model defaults to `gemini-3.8-flash`; `GEMINI_MODEL` and `PORT` can be overridden. Do not bake secrets into the image or commit them.
+The frontend is prepared for Vercel and the API for Render. In Vercel, import the repository, set **Root Directory** to `client`, use `npm run build`, and publish `dist`. Add `VITE_API_BASE_URL` as a Vercel environment variable with the Render API base URL (for example, `https://your-api-service.onrender.com`, without `/api`). This value is a public endpoint URL, not a secret. The client reads it at build time.
+
+`render.yaml` defines a Node web service using `npm ci --omit=dev` and `npm run start --workspace server`. Create it from the repository Blueprint. In the Render service environment settings, configure `MONGODB_URI`, `GEMINI_API_KEY`, and `CLIENT_ORIGIN`; the first two are secret values and must be entered only in the host dashboard. Set `CLIENT_ORIGIN` to the Vercel production origin. It accepts comma-separated origins if you need to allow more than one. The Blueprint sets `SERVE_CLIENT=false` and defaults `GEMINI_MODEL` to `gemini-3.8-flash`; Render supplies `PORT`.
+
+For local setup, put `MONGODB_URI` and `GEMINI_API_KEY` in the ignored root `.env`; optional values are `PORT`, `GEMINI_MODEL`, and `CLIENT_ORIGIN`. Local Vite development uses its `/api` proxy, so `VITE_API_BASE_URL` is unnecessary. `client/.env.example` documents the frontend variable without containing credentials. Never put server secrets in a `VITE_` variable, frontend source, or committed file.
+
+The root Dockerfile remains available for a combined frontend/API container deployment. The Render Blueprint now prepares separate hosting. No live Atlas or Gemini check is implied by a successful local build.
 
 The GitHub Actions workflow runs the frontend build, lint, and backend syntax checks without credentials. Publishing and deployment still require a chosen GitHub repository and a host with the runtime environment variables configured.
