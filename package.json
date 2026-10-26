@@ -1,0 +1,17 @@
+{
+  "name": "ai-mystery-room",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20.19.0" },
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev --workspace client\" \"npm:dev --workspace server\"",
+    "build": "npm run build --workspace client",
+    "test": "npm test --workspace server",
+    "start": "npm run start --workspace server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
