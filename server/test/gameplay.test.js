@@ -117,6 +117,31 @@ test('full gameplay workflow enforces difficulty, clue, hint, accusation, score,
   assert.equal((await request(`/api/cases/${game._id}/clues/2/discover`, { method: 'POST', body: {} })).status, 409)
 })
 
+test('case and investigation responses withhold the solution and undiscovered clues', async () => {
+  const created = await request('/api/cases', { method: 'POST', body: { difficulty: 'Easy' } })
+  const game = created.data.case
+  const creationJson = JSON.stringify(game)
+  assert.equal('clues' in game, false)
+  assert.equal('hintTexts' in game, false)
+  assert.equal(creationJson.includes('generated-culprit'), false)
+  assert.equal(creationJson.includes('clock log proves'), false)
+  assert.equal(creationJson.includes('Clue 1'), false)
+
+  const discovered = await request(`/api/cases/${game._id}/clues/1/discover`, { method: 'POST', body: {} })
+  assert.equal(discovered.data.clue.title, 'Clue 1')
+  assert.deepEqual(discovered.data.discoveredClues.map((clue) => clue.title), ['Clue 1'])
+  const investigationJson = JSON.stringify(discovered.data)
+  assert.equal(investigationJson.includes('Clue 2'), false)
+  assert.equal(investigationJson.includes('generated-culprit'), false)
+  assert.equal(investigationJson.includes('clock log proves'), false)
+
+  const hint = await request(`/api/cases/${game._id}/hints`, { method: 'POST', body: {} })
+  assert.equal(hint.data.hint, 'Hint 1')
+  assert.equal('hintTexts' in hint.data, false)
+  assert.equal('solution' in hint.data, false)
+  assert.equal('culpritId' in hint.data, false)
+})
+
 test('all difficulty counts and wrong-accusation minimum score are enforced', async () => {
   for (const [difficulty, rules] of Object.entries(DIFFICULTIES)) {
     const created = await request('/api/cases', { method: 'POST', body: { difficulty } })
@@ -142,6 +167,19 @@ test('solution, culprit, and generated hint fields are excluded by default in Mo
   assert.equal(Case.schema.path('culpritId').options.select, false)
   assert.equal(Case.schema.path('solution').options.select, false)
   assert.equal(Case.schema.path('hintTexts').options.select, false)
+})
+
+test('health endpoint reports a disconnected database as unavailable', async () => {
+  const healthApp = createApp({ databaseStatus: () => 'disconnected', serveClient: false })
+  const healthServer = healthApp.listen(0)
+  await new Promise((resolve) => healthServer.once('listening', resolve))
+  try {
+    const response = await fetch(`http://127.0.0.1:${healthServer.address().port}/api/health`)
+    assert.equal(response.status, 503)
+    assert.deepEqual(await response.json(), { status: 'unavailable', database: 'disconnected' })
+  } finally {
+    await new Promise((resolve, reject) => healthServer.close((error) => error ? reject(error) : resolve()))
+  }
 })
 
 test('Gemini response validation enforces counts, distinct suspects and clues, and culprit membership', () => {

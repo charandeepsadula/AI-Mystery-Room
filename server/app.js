@@ -12,7 +12,11 @@ export function createApp({ CaseModel = Case, mysteryGenerator = generateMystery
   app.use(cors({ origin: clientOrigins.length === 1 ? clientOrigins[0] : clientOrigins }))
   app.use(express.json({ limit: '16kb' }))
 
-  app.get('/api/health', (_req, res) => res.json({ status: 'ok', database: databaseStatus() }))
+  app.get('/api/health', (_req, res) => {
+    const database = databaseStatus()
+    const available = database === 'connected'
+    res.status(available ? 200 : 503).json({ status: available ? 'ok' : 'unavailable', database })
+  })
 
   app.post('/api/cases', async (req, res, next) => {
     try {
